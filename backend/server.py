@@ -1,4 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Header, Depends
+from fastapi.responses import HTMLResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -474,6 +475,87 @@ async def customer_care():
         "email": "care@habibnetworks.in",
         "whatsapp": CUSTOMER_CARE_NUMBER,
     }
+
+
+PRIVACY_HTML = """<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy · Habib Networks</title>
+<style>
+:root{--red:#D90429;--navy:#0A1128;--muted:#475467;--border:#EAECF0}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:var(--navy);line-height:1.6;background:#fff}
+.wrap{max-width:760px;margin:0 auto;padding:32px 20px 64px}
+.badge{display:inline-flex;align-items:center;gap:10px;margin-bottom:20px}
+.logo{width:44px;height:44px;border-radius:12px;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px}
+.brand{font-weight:800;font-size:18px}
+h1{font-size:28px;margin:8px 0 4px}
+.updated{color:var(--muted);font-size:14px;margin-bottom:28px}
+h2{font-size:19px;margin:28px 0 8px;color:var(--navy)}
+p,li{color:#1D2939;font-size:15.5px}
+ul{padding-left:20px}
+a{color:var(--red)}
+.card{border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin-top:24px;background:#F9FAFB}
+.footer{margin-top:40px;color:var(--muted);font-size:13px;border-top:1px solid var(--border);padding-top:20px}
+</style></head>
+<body><div class="wrap">
+<div class="badge"><div class="logo">HN</div><div class="brand">Habib Networks</div></div>
+<h1>Privacy Policy</h1>
+<div class="updated">SITI Broadband · Last updated: June 2026</div>
+
+<p>Habib Networks ("we", "us", "our") operates the Habib Networks mobile application (the "App") for managing broadband plans, recharges, offers, and support. This policy explains what information we collect, how we use it, and your choices.</p>
+
+<h2>1. Information We Collect</h2>
+<ul>
+<li><b>Mobile number</b> — used to log you in (via OTP) and identify your broadband connection.</li>
+<li><b>Account details</b> — your name, connection ID, and optionally an email address you or our staff provide.</li>
+<li><b>Service data</b> — your active plan, recharge history, data-usage summary, speed-test results, and referral code.</li>
+<li><b>Support data</b> — complaint tickets you raise, including subject, category, and description.</li>
+</ul>
+
+<h2>2. How We Use Your Information</h2>
+<ul>
+<li>To provide and manage your broadband service, plans, and recharges.</li>
+<li>To respond to your complaints and provide customer support.</li>
+<li>To show relevant plans and promotional offers.</li>
+<li>To operate the referral program and detect misuse.</li>
+</ul>
+
+<h2>3. Payments</h2>
+<p>Recharge payments are processed through your chosen UPI app. We do not store your UPI PIN, card numbers, or bank credentials. We only keep a record of the transaction reference, plan, and amount.</p>
+
+<h2>4. Sharing of Information</h2>
+<p>We do not sell your personal information. We share it only with service providers who help us operate the App (such as hosting), and where required by law.</p>
+
+<h2>5. Data Retention</h2>
+<p>We retain your account and service data for as long as your connection is active and as needed to comply with legal and accounting obligations.</p>
+
+<h2>6. Your Choices & Rights</h2>
+<p>You can request access to, correction of, or deletion of your account data by contacting us. Deleting your account will remove your personal data, subject to legal retention requirements.</p>
+
+<h2>7. Children</h2>
+<p>The App is intended for account holders aged 18 and above and is not directed at children.</p>
+
+<h2>8. Security</h2>
+<p>We use reasonable technical and organizational measures to protect your data. Authentication tokens are stored securely on your device.</p>
+
+<h2>9. Changes to This Policy</h2>
+<p>We may update this policy from time to time. Material changes will be reflected here with a new "Last updated" date.</p>
+
+<div class="card">
+<h2 style="margin-top:0">Contact Us</h2>
+<p style="margin:4px 0">Email: <a href="mailto:care@habibnetworks.in">care@habibnetworks.in</a></p>
+<p style="margin:4px 0">Customer Care: 1800-123-456 (24x7)</p>
+<p style="margin:4px 0">Habib Networks · SITI Broadband</p>
+</div>
+
+<div class="footer">© 2026 Habib Networks. All rights reserved.</div>
+</div></body></html>"""
+
+
+@api_router.get("/privacy", response_class=HTMLResponse)
+async def privacy_policy():
+    return HTMLResponse(content=PRIVACY_HTML)
 
 
 # ===========================================================================

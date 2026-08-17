@@ -51,6 +51,7 @@ export default function Account() {
     { key: "billing", icon: "file-text", label: "Billing History", value: `${recharges.length} txns`, onPress: () => toast.show(recharges.length ? `Last: ₹${recharges[0].amount} · ${recharges[0].plan_name}` : "No recharges yet", "info") },
     { key: "care", icon: "phone-call", label: "Customer Care", value: "24x7", onPress: () => router.push("/customer-care") },
     { key: "plans", icon: "wifi", label: "Change Plan", value: "", onPress: () => router.push("/(tabs)/plans") },
+    { key: "privacy", icon: "shield", label: "Privacy Policy", value: "", onPress: () => router.push("/privacy") },
     { key: "about", icon: "info", label: "About Habib Networks", value: "v1.0", onPress: () => toast.show("Habib Networks · SITI Broadband", "info") },
   ];
 
