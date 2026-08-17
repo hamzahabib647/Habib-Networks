@@ -98,6 +98,8 @@ export default function Account() {
               key={r.key}
               testID={`account-row-${r.key}`}
               onPress={r.onPress}
+              onLongPress={r.key === "about" ? () => router.push("/admin") : undefined}
+              delayLongPress={600}
               style={({ pressed }) => [styles.row, i < rows.length - 1 && styles.rowBorder, pressed && { opacity: 0.6 }]}
             >
               <View style={styles.rowIcon}>

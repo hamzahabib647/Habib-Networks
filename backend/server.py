@@ -10,6 +10,9 @@ from typing import List, Optional, Annotated
 from bson import ObjectId
 import uuid
 import random
+import hmac
+import hashlib
+import jwt
 from datetime import datetime, timezone, timedelta
 
 ROOT_DIR = Path(__file__).parent
@@ -19,6 +22,13 @@ load_dotenv(ROOT_DIR / '.env')
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
+
+# Admin auth config
+JWT_SECRET_KEY = os.environ['JWT_SECRET_KEY']
+JWT_ALGORITHM = "HS256"
+ADMIN_PIN_PEPPER = os.environ['ADMIN_PIN_PEPPER']
+DEFAULT_ADMIN_PIN = os.environ.get('DEFAULT_ADMIN_PIN', '246810')
+ADMIN_TOKEN_MINUTES = 240
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
@@ -301,7 +311,7 @@ async def update_me(payload: dict, user=Depends(get_current_user)):
 
 @api_router.get("/plans", response_model=List[Plan])
 async def get_plans(duration: Optional[str] = None):
-    q = {}
+    q = {"active": {"$ne": False}}
     if duration and duration != "All":
         q["duration_label"] = duration
     plans = await db.plans.find(q, {"_id": 0}).to_list(100)
@@ -466,6 +476,343 @@ async def customer_care():
     }
 
 
+# ===========================================================================
+# ADMIN
+# ===========================================================================
+def hash_pin(pin: str) -> str:
+    return hmac.new(ADMIN_PIN_PEPPER.encode(), pin.encode(), hashlib.sha256).hexdigest()
+
+
+async def ensure_admin_seed():
+    cfg = await db.admin_config.find_one({"_id": "admin"})
+    if not cfg:
+        await db.admin_config.insert_one({"_id": "admin", "pin_hash": hash_pin(DEFAULT_ADMIN_PIN)})
+        logger.info("Seeded default admin PIN")
+    # Ensure existing seeded plans have an 'active' flag
+    await db.plans.update_many({"active": {"$exists": False}}, {"$set": {"active": True}})
+
+
+async def verify_admin_pin(pin: str) -> bool:
+    cfg = await db.admin_config.find_one({"_id": "admin"})
+    if not cfg:
+        return False
+    return hmac.compare_digest(hash_pin(pin), cfg["pin_hash"])
+
+
+def create_admin_token() -> str:
+    now = now_utc()
+    payload = {"sub": "admin", "role": "admin", "iat": now, "exp": now + timedelta(minutes=ADMIN_TOKEN_MINUTES)}
+    return jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+
+
+async def require_admin(authorization: Optional[str] = Header(None)):
+    unauth = HTTPException(status_code=401, detail="Admin authentication required")
+    if not authorization or not authorization.startswith("Bearer "):
+        raise unauth
+    token = authorization.split(" ", 1)[1].strip()
+    try:
+        claims = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM],
+                            options={"require": ["exp", "iat", "sub", "role"]})
+    except jwt.InvalidTokenError:
+        raise unauth
+    if claims.get("sub") != "admin" or claims.get("role") != "admin":
+        raise unauth
+    return claims
+
+
+class AdminLogin(BaseModel):
+    pin: str
+
+
+class ChangePin(BaseModel):
+    current_pin: str
+    new_pin: str
+
+
+class AdminPlan(BaseModel):
+    name: str
+    speed_mbps: int
+    price: int
+    duration_label: str
+    duration_days: Optional[int] = None
+    data_quota_gb: int = 3300
+    features: List[str] = []
+    tag: Optional[str] = None
+    active: bool = True
+
+
+class AdminOffer(BaseModel):
+    title: str
+    subtitle: str
+    cta: str = "Learn More"
+    image: str
+    badge: Optional[str] = None
+    accent: Optional[str] = "#D90429"
+
+
+class AdminCustomer(BaseModel):
+    name: str
+    phone: str
+    email: Optional[str] = None
+    plan_id: Optional[str] = None
+
+
+class AssignPlan(BaseModel):
+    plan_id: str
+
+
+class ComplaintStatus(BaseModel):
+    status: str
+
+
+DURATION_DAYS = {"Monthly": 30, "6 Months": 180, "Yearly": 365}
+
+
+@api_router.post("/admin/login")
+async def admin_login(body: AdminLogin):
+    if not await verify_admin_pin(body.pin):
+        raise HTTPException(status_code=401, detail="Invalid PIN")
+    return {"access_token": create_admin_token(), "token_type": "bearer", "expires_in": ADMIN_TOKEN_MINUTES * 60}
+
+
+@api_router.post("/admin/change-pin")
+async def admin_change_pin(body: ChangePin, _=Depends(require_admin)):
+    if not await verify_admin_pin(body.current_pin):
+        raise HTTPException(status_code=400, detail="Current PIN is incorrect")
+    if len(body.new_pin) < 4:
+        raise HTTPException(status_code=400, detail="New PIN must be at least 4 digits")
+    await db.admin_config.update_one({"_id": "admin"}, {"$set": {"pin_hash": hash_pin(body.new_pin)}})
+    return {"success": True}
+
+
+@api_router.get("/admin/stats")
+async def admin_stats(_=Depends(require_admin)):
+    total_customers = await db.users.count_documents({})
+    now_iso = iso(now_utc())
+    active_plans = await db.users.count_documents({"active_plan_id": {"$ne": None}, "plan_end": {"$gt": now_iso}})
+    open_complaints = await db.complaints.count_documents({"status": {"$ne": "resolved"}})
+    revenue_agg = await db.recharges.aggregate([{"$group": {"_id": None, "total": {"$sum": "$amount"}}}]).to_list(1)
+    revenue = revenue_agg[0]["total"] if revenue_agg else 0
+    total_plans = await db.plans.count_documents({})
+    total_offers = await db.offers.count_documents({})
+    return {
+        "total_customers": total_customers,
+        "active_plans": active_plans,
+        "open_complaints": open_complaints,
+        "total_revenue": revenue,
+        "total_plans": total_plans,
+        "total_offers": total_offers,
+    }
+
+
+# ---- Plans ----
+@api_router.get("/admin/plans")
+async def admin_get_plans(_=Depends(require_admin)):
+    return await db.plans.find({}, {"_id": 0}).to_list(200)
+
+
+@api_router.post("/admin/plans")
+async def admin_create_plan(body: AdminPlan, _=Depends(require_admin)):
+    doc = body.dict()
+    doc["id"] = "p_" + uuid.uuid4().hex[:10]
+    if not doc.get("duration_days"):
+        doc["duration_days"] = DURATION_DAYS.get(doc["duration_label"], 30)
+    await db.plans.insert_one(dict(doc))
+    doc.pop("_id", None)
+    return doc
+
+
+@api_router.put("/admin/plans/{plan_id}")
+async def admin_update_plan(plan_id: str, body: dict, _=Depends(require_admin)):
+    allowed = {"name", "speed_mbps", "price", "duration_label", "duration_days", "data_quota_gb", "features", "tag", "active"}
+    updates = {k: v for k, v in body.items() if k in allowed}
+    if "duration_label" in updates and "duration_days" not in updates:
+        updates["duration_days"] = DURATION_DAYS.get(updates["duration_label"], 30)
+    if not updates:
+        raise HTTPException(status_code=400, detail="No valid fields to update")
+    res = await db.plans.update_one({"id": plan_id}, {"$set": updates})
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    return await db.plans.find_one({"id": plan_id}, {"_id": 0})
+
+
+@api_router.delete("/admin/plans/{plan_id}")
+async def admin_delete_plan(plan_id: str, _=Depends(require_admin)):
+    await db.plans.delete_one({"id": plan_id})
+    return {"success": True}
+
+
+# ---- Offers ----
+@api_router.get("/admin/offers")
+async def admin_get_offers(_=Depends(require_admin)):
+    return await db.offers.find({}, {"_id": 0}).to_list(200)
+
+
+@api_router.post("/admin/offers")
+async def admin_create_offer(body: AdminOffer, _=Depends(require_admin)):
+    doc = body.dict()
+    doc["id"] = "o_" + uuid.uuid4().hex[:10]
+    await db.offers.insert_one(dict(doc))
+    doc.pop("_id", None)
+    return doc
+
+
+@api_router.put("/admin/offers/{offer_id}")
+async def admin_update_offer(offer_id: str, body: dict, _=Depends(require_admin)):
+    allowed = {"title", "subtitle", "cta", "image", "badge", "accent"}
+    updates = {k: v for k, v in body.items() if k in allowed}
+    if not updates:
+        raise HTTPException(status_code=400, detail="No valid fields to update")
+    res = await db.offers.update_one({"id": offer_id}, {"$set": updates})
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Offer not found")
+    return await db.offers.find_one({"id": offer_id}, {"_id": 0})
+
+
+@api_router.delete("/admin/offers/{offer_id}")
+async def admin_delete_offer(offer_id: str, _=Depends(require_admin)):
+    await db.offers.delete_one({"id": offer_id})
+    return {"success": True}
+
+
+# ---- Customers ----
+async def customer_summary(user) -> dict:
+    plan_name = None
+    if user.get("active_plan_id"):
+        plan = await db.plans.find_one({"id": user["active_plan_id"]}, {"_id": 0, "name": 1})
+        plan_name = plan["name"] if plan else None
+    end = user.get("plan_end")
+    is_active = bool(end and end > iso(now_utc()))
+    return {
+        "id": user["id"],
+        "name": user["name"],
+        "phone": user["phone"],
+        "email": user.get("email"),
+        "connection_id": user["connection_id"],
+        "active_plan_id": user.get("active_plan_id"),
+        "active_plan_name": plan_name,
+        "plan_end": end,
+        "is_active": is_active,
+        "created_at": user.get("created_at"),
+    }
+
+
+@api_router.get("/admin/customers")
+async def admin_get_customers(_=Depends(require_admin)):
+    users = await db.users.find({}).sort("created_at", -1).to_list(500)
+    return [await customer_summary(u) for u in users]
+
+
+@api_router.post("/admin/customers")
+async def admin_create_customer(body: AdminCustomer, _=Depends(require_admin)):
+    if len(body.phone) < 10:
+        raise HTTPException(status_code=400, detail="Enter a valid phone number")
+    existing = await db.users.find_one({"phone": body.phone})
+    if existing:
+        raise HTTPException(status_code=409, detail="A customer with this number already exists")
+    doc = {
+        "id": str(uuid.uuid4()),
+        "phone": body.phone,
+        "name": body.name,
+        "email": body.email,
+        "connection_id": "HN" + body.phone[-6:].rjust(6, "0"),
+        "active_plan_id": None,
+        "plan_start": None,
+        "plan_end": None,
+        "data_used_gb": 0,
+        "data_quota_gb": 0,
+        "wallet_balance": 0,
+        "referral_code": gen_referral_code(body.phone),
+        "created_at": iso(now_utc()),
+    }
+    if body.plan_id:
+        plan = await db.plans.find_one({"id": body.plan_id}, {"_id": 0})
+        if not plan:
+            raise HTTPException(status_code=404, detail="Selected plan not found")
+        start = now_utc()
+        doc.update({
+            "active_plan_id": body.plan_id,
+            "plan_start": iso(start),
+            "plan_end": iso(start + timedelta(days=plan["duration_days"])),
+            "data_quota_gb": plan["data_quota_gb"],
+        })
+    await db.users.insert_one(dict(doc))
+    return await customer_summary(doc)
+
+
+@api_router.get("/admin/customers/{phone}")
+async def admin_customer_detail(phone: str, _=Depends(require_admin)):
+    user = await db.users.find_one({"phone": phone})
+    if not user:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    recharges = await db.recharges.find({"phone": phone}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    complaints = await db.complaints.find({"phone": phone}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    summary = await customer_summary(user)
+    summary["recharges"] = recharges
+    summary["complaints"] = complaints
+    summary["data_used_gb"] = user.get("data_used_gb", 0)
+    summary["data_quota_gb"] = user.get("data_quota_gb", 0)
+    return summary
+
+
+@api_router.post("/admin/customers/{phone}/assign-plan")
+async def admin_assign_plan(phone: str, body: AssignPlan, _=Depends(require_admin)):
+    user = await db.users.find_one({"phone": phone})
+    if not user:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    plan = await db.plans.find_one({"id": body.plan_id}, {"_id": 0})
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    start = now_utc()
+    end = start + timedelta(days=plan["duration_days"])
+    await db.users.update_one({"phone": phone}, {"$set": {
+        "active_plan_id": body.plan_id,
+        "plan_start": iso(start),
+        "plan_end": iso(end),
+        "data_used_gb": 0,
+        "data_quota_gb": plan["data_quota_gb"],
+    }})
+    # Log as an offline recharge for revenue/history
+    await db.recharges.insert_one({
+        "id": str(uuid.uuid4()),
+        "phone": phone,
+        "plan_id": body.plan_id,
+        "plan_name": plan["name"],
+        "amount": plan["price"],
+        "method": "admin_offline",
+        "txn_id": "OFF" + uuid.uuid4().hex[:8].upper(),
+        "status": "success",
+        "created_at": iso(now_utc()),
+    })
+    user = await db.users.find_one({"phone": phone})
+    return await customer_summary(user)
+
+
+# ---- Complaints ----
+@api_router.get("/admin/complaints")
+async def admin_get_complaints(status: Optional[str] = None, _=Depends(require_admin)):
+    q = {}
+    if status and status != "all":
+        if status == "active":
+            q["status"] = {"$ne": "resolved"}
+        else:
+            q["status"] = status
+    items = await db.complaints.find(q, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return items
+
+
+@api_router.put("/admin/complaints/{complaint_id}")
+async def admin_update_complaint(complaint_id: str, body: ComplaintStatus, _=Depends(require_admin)):
+    if body.status not in {"open", "in_progress", "resolved"}:
+        raise HTTPException(status_code=400, detail="Invalid status")
+    res = await db.complaints.update_one({"id": complaint_id}, {"$set": {
+        "status": body.status, "updated_at": iso(now_utc())
+    }})
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Complaint not found")
+    return await db.complaints.find_one({"id": complaint_id}, {"_id": 0})
+
+
 app.include_router(api_router)
 
 app.add_middleware(
@@ -480,6 +827,7 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup():
     await ensure_seed()
+    await ensure_admin_seed()
 
 
 @app.on_event("shutdown")

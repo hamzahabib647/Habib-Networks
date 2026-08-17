@@ -53,6 +53,7 @@ export default function RootLayout() {
                 <Stack.Screen name="referral" options={{ presentation: "card" }} />
                 <Stack.Screen name="new-complaint" options={{ presentation: "modal" }} />
                 <Stack.Screen name="customer-care" options={{ presentation: "modal" }} />
+                <Stack.Screen name="admin" />
               </Stack>
             </ToastProvider>
           </AuthProvider>

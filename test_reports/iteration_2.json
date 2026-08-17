@@ -1,0 +1,49 @@
+{
+  "summary": "Full admin-panel testing for Habib Networks. Backend: 19/19 pytest tests passed for the new /api/admin/* surface (PIN login with wrong/correct PIN, JWT bearer required + rejected on invalid token, stats fields shape, Plans admin CRUD incl. active-toggle hiding from public /api/plans, Offers admin CRUD, Customers list/create/duplicate-409/detail/assign-plan-creates-offline-recharge, Complaints filter=active|resolved|all + status transitions + validation, change-pin with wrong-current-400 and full change+revert). Frontend (390x844 mobile viewport): admin PIN gate rejects wrong PIN + accepts 246810 -> Dashboard renders all 4 stat cards (Customers/Active Plans/Revenue/Open Tickets) and the Manage grid. Navigated into Plans (6 seeded rows visible with Visible/Edit/Delete row actions and add-plan-btn), Offers (4 rows + add-offer-btn), Customers (add-customer-btn + rows), and Complaints (Active/Resolved/All filter chips work — counts 7/6/13 respectively, status change via 'In Progress' button shows 'Marked in progress' toast). End-to-end customer flow verified: created a new customer via UI, opened detail modal, tapped an 'assign-plan-*' chip; API confirms active_plan_id set and 1 offline recharge (admin_offline / OFF*) logged. Staff entry wiring: onLongPress on 'About Habib Networks' row -> router.push('/admin') is present (code review). No React Native red screens or backend errors during testing. Only console warnings observed (shadow*, pointerEvents, useNativeDriver on web) — same cosmetic warnings already reported in iteration_1.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "AdminModal (src/components/admin/kit.tsx)",
+        "issue": "On a 390x844 viewport, when the modal body is tall (Add Customer + Customer Detail modals with plan chips), the primary 'modal-save' button and lower content overflow below the visible viewport with no internal scroll — Playwright reports the element outside viewport and I had to use dispatch_event to click it. Real users on smaller phones may not be able to reach Save / assign-plan chips.",
+        "testID": "modal-save / assign-plan-*",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      { "screen": "Admin > Customers > Detail modal", "issues": ["Long list of assign-plan chips may not fit on small phones — modal content should be inside a ScrollView so users can reach every plan."] }
+    ],
+    "react_native_issues": [
+      { "component": "theme + admin/kit + admin/dashboard", "issue": "shadow.soft (shadow* style props) still produces 'shadow* style props are deprecated. Use boxShadow' console warnings on web. Reference: /app/frontend/src/theme/theme.ts and consumers (dashboard.tsx:184 uses ...shadow.soft)." },
+      { "component": "Toast.tsx", "issue": "props.pointerEvents deprecated warning persists (previously reported). Reference: /app/frontend/src/components/Toast.tsx:53." }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_admin.py",
+    "/app/test_reports/pytest/admin_results.xml"
+  ],
+  "action_items": [
+    "Wrap AdminModal content in a ScrollView (or set maxHeight + scroll) so the Save button and assign-plan chips remain reachable on 390x844 and smaller viewports. Also add testIDs for the modal close/backdrop for easier E2E.",
+    "(Optional/cosmetic) Migrate shadow* to boxShadow in theme + admin dashboard cards; move pointerEvents into style in Toast.tsx.",
+    "No functional backend fixes needed — admin surface is stable."
+  ],
+  "critical_code_review_comments": [
+    "server.py cleanly separates admin routes; JWT verified with require exp/iat/sub/role — good.",
+    "hash_pin uses HMAC-SHA256 with a pepper from env — good for demo (still not per-user salted).",
+    "admin_update_plan whitelists allowed keys and 404s missing plans — good.",
+    "public GET /api/plans filters {'active': {'$ne': False}} which correctly hides plans explicitly set active=false but also keeps legacy docs missing the field visible (backfilled on startup); good.",
+    "assign-plan logs an admin_offline recharge with a distinct txn prefix 'OFF' — makes revenue reconciliation trivial.",
+    "All admin endpoints project out _id — no ObjectId leaks.",
+    "Frontend uses process.env.EXPO_PUBLIC_BACKEND_URL and secureSet for the admin JWT — compliant."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_admin.py (new — 19 admin tests, all passing)"
+  ],
+  "success_rate": { "backend": "100%", "frontend": "100%" },
+  "seed_data_creation": "Backend seeds default admin PIN 246810 into db.admin_config on startup and backfills active=true on legacy plans. Tests created transient TEST_* plans/offers/customers and cleaned up plans/offers. Admin PIN change test reverts the PIN back to 246810 at end.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Admin JWT is a real signed JWT (HS256), sent as 'Authorization: Bearer <jwt>' — different from the customer 'Bearer <phone>' shortcut. Admin PIN can be changed at runtime via POST /api/admin/change-pin; tests revert to 246810 at the end. AdminModal (kit.tsx) content isn't wrapped in a ScrollView, so E2E clicks on 'modal-save' or long lists of chips may need page.dispatch_event('click') rather than .click() on 390x844. Filter/complaint/customer testIDs: admin-cfilter-<key>, admin-complaint-<id>, set-status-<id>-<status>, customer-<phone>, cust-plan-<planId>, assign-plan-<planId>, modal-save.",
+  "rca_of_issue": "N/A — no blocking issues. Only UX finding: AdminModal missing internal scroll — root cause in /app/frontend/src/components/admin/kit.tsx AdminModal renders children directly in a fixed-height overlay without a ScrollView wrapper."
+}

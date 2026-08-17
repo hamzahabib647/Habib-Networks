@@ -31,7 +31,8 @@ Build a mobile app for a broadband business named Habib Networks (SITI Broadband
 - Customer Care: dialer call + in-app VoIP mock calling screen
 - **Speed Test (2026-08-17)**: one-tap launcher on Home + quick action; animated 270° gauge with ping/download/upload phases, backend `/api/speedtest` computes plan-relative results + rating
 - **Referral Rewards (2026-08-17)**: `/referral` screen with unique code, native Share link, reward hero, how-it-works steps, joined/earned stats; entry via Account row + "Refer & Earn" offer; backend `/api/referral`
-- Full-stack tested: 20/20 backend, all frontend flows pass
+- **Admin Panel (2026-08-17)**: separate `/admin` route secured by shared PIN (JWT). Dashboard stats (customers, active plans, revenue, open tickets); manage Plans (CRUD + show/hide), Offers (CRUD), Customers (list, create account, view detail + history, offline plan activation), Complaints (status updates + filters), change-PIN. Backend `/api/admin/*` with `require_admin` JWT guard. Staff entry via long-press on Account "About" row. Default PIN 246810. Backend 19/19 admin tests pass.
+- Full-stack tested: 20/20 core backend + 19/19 admin backend, all frontend flows pass
 
 ## Backlog (prioritized)
 - P1: Speed test tool, referral flow, in-app notifications inbox
