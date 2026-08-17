@@ -49,6 +49,8 @@ export default function RootLayout() {
                 <Stack.Screen name="login" />
                 <Stack.Screen name="(tabs)" />
                 <Stack.Screen name="recharge" options={{ presentation: "card" }} />
+                <Stack.Screen name="speed-test" options={{ presentation: "card" }} />
+                <Stack.Screen name="referral" options={{ presentation: "card" }} />
                 <Stack.Screen name="new-complaint" options={{ presentation: "modal" }} />
                 <Stack.Screen name="customer-care" options={{ presentation: "modal" }} />
               </Stack>

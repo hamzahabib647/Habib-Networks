@@ -46,6 +46,8 @@ export default function Account() {
   };
 
   const rows = [
+    { key: "referral", icon: "gift", label: "Refer & Earn", value: "1 mo free", onPress: () => router.push("/referral") },
+    { key: "speedtest", icon: "activity", label: "Speed Test", value: "", onPress: () => router.push("/speed-test") },
     { key: "billing", icon: "file-text", label: "Billing History", value: `${recharges.length} txns`, onPress: () => toast.show(recharges.length ? `Last: ₹${recharges[0].amount} · ${recharges[0].plan_name}` : "No recharges yet", "info") },
     { key: "care", icon: "phone-call", label: "Customer Care", value: "24x7", onPress: () => router.push("/customer-care") },
     { key: "plans", icon: "wifi", label: "Change Plan", value: "", onPress: () => router.push("/(tabs)/plans") },

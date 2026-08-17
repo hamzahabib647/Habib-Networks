@@ -29,6 +29,8 @@ Build a mobile app for a broadband business named Habib Networks (SITI Broadband
 - Complaints: Active/Resolved filters, seeded history, FAB → new complaint form
 - Account: profile, connection ID copy, billing history, customer care, logout
 - Customer Care: dialer call + in-app VoIP mock calling screen
+- **Speed Test (2026-08-17)**: one-tap launcher on Home + quick action; animated 270° gauge with ping/download/upload phases, backend `/api/speedtest` computes plan-relative results + rating
+- **Referral Rewards (2026-08-17)**: `/referral` screen with unique code, native Share link, reward hero, how-it-works steps, joined/earned stats; entry via Account row + "Refer & Earn" offer; backend `/api/referral`
 - Full-stack tested: 20/20 backend, all frontend flows pass
 
 ## Backlog (prioritized)

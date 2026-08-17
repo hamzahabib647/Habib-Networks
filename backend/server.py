@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field, BeforeValidator
 from typing import List, Optional, Annotated
 from bson import ObjectId
 import uuid
+import random
 from datetime import datetime, timezone, timedelta
 
 ROOT_DIR = Path(__file__).parent
@@ -46,6 +47,19 @@ def iso(dt: datetime) -> str:
 
 
 CUSTOMER_CARE_NUMBER = "+911800123456"
+REFERRAL_REWARD_TEXT = "You & your friend each get 1 month FREE when they activate a plan."
+
+
+def gen_referral_code(phone: str) -> str:
+    return "HABIB" + phone[-4:] + str(random.randint(10, 99))
+
+
+async def get_or_create_referral(user) -> str:
+    code = user.get("referral_code")
+    if not code:
+        code = gen_referral_code(user["phone"])
+        await db.users.update_one({"phone": user["phone"]}, {"$set": {"referral_code": code}})
+    return code
 
 
 # ---------------------------------------------------------------------------
@@ -176,6 +190,7 @@ async def ensure_user(phone: str):
         "data_used_gb": 148,
         "data_quota_gb": 3300,
         "wallet_balance": 0,
+        "referral_code": gen_referral_code(phone),
         "created_at": iso(now_utc()),
     }
     await db.users.insert_one(user_doc)
@@ -377,6 +392,67 @@ async def create_complaint(req: ComplaintCreate, user=Depends(get_current_user))
     }
     await db.complaints.insert_one(dict(doc))
     return doc
+
+
+@api_router.post("/speedtest")
+async def speedtest(user=Depends(get_current_user)):
+    active = await build_active_plan(user)
+    plan_speed = active["plan"]["speed_mbps"] if active else 100
+    # Realistic result: download close to plan speed, upload ~40-60% of download.
+    download = round(plan_speed * random.uniform(0.82, 0.99), 1)
+    upload = round(download * random.uniform(0.4, 0.6), 1)
+    ping = random.randint(4, 22)
+    jitter = random.randint(1, 6)
+    ratio = download / plan_speed if plan_speed else 1
+    if ratio >= 0.9:
+        rating = "Excellent"
+    elif ratio >= 0.75:
+        rating = "Good"
+    else:
+        rating = "Fair"
+    result = {
+        "id": str(uuid.uuid4()),
+        "phone": user["phone"],
+        "download_mbps": download,
+        "upload_mbps": upload,
+        "ping_ms": ping,
+        "jitter_ms": jitter,
+        "plan_speed_mbps": plan_speed,
+        "rating": rating,
+        "server": "Habib Networks · Mumbai",
+        "created_at": iso(now_utc()),
+    }
+    await db.speedtests.insert_one(dict(result))
+    result.pop("phone", None)
+    return result
+
+
+@api_router.get("/speedtest/last")
+async def speedtest_last(user=Depends(get_current_user)):
+    doc = await db.speedtests.find_one({"phone": user["phone"]}, {"_id": 0, "phone": 0}, sort=[("created_at", -1)])
+    return doc or {}
+
+
+@api_router.get("/referral")
+async def referral(user=Depends(get_current_user)):
+    code = await get_or_create_referral(user)
+    invited = await db.recharges.count_documents({"referred_by": code})  # placeholder tracking
+    joined = await db.users.count_documents({"referred_by": code})
+    rewards_earned = joined  # 1 free month per joined friend
+    return {
+        "code": code,
+        "share_url": f"https://habibnetworks.in/join?ref={code}",
+        "reward_text": REFERRAL_REWARD_TEXT,
+        "reward_value": "1 Month Free",
+        "invited_count": invited,
+        "joined_count": joined,
+        "rewards_earned": rewards_earned,
+        "steps": [
+            {"icon": "share-2", "title": "Share your link", "desc": "Send your invite to friends & family"},
+            {"icon": "user-plus", "title": "Friend joins", "desc": "They sign up and activate any plan"},
+            {"icon": "gift", "title": "Both get rewarded", "desc": "You & your friend each get 1 month free"},
+        ],
+    }
 
 
 @api_router.get("/customer-care")

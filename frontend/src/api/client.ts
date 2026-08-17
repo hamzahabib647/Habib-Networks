@@ -55,4 +55,7 @@ export const api = {
   createComplaint: (subject: string, category: string, description: string) =>
     request("/complaints", { method: "POST", body: { subject, category, description } }),
   customerCare: () => request("/customer-care", { auth: false }),
+  speedTest: () => request("/speedtest", { method: "POST" }),
+  lastSpeedTest: () => request("/speedtest/last"),
+  referral: () => request("/referral"),
 };

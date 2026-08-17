@@ -25,7 +25,7 @@ import { colors, fonts, radius, spacing, shadow } from "@/src/theme/theme";
 const QUICK_ACTIONS = [
   { key: "recharge", label: "Recharge", icon: "zap" },
   { key: "upgrade", label: "Change Plan", icon: "trending-up" },
-  { key: "support", label: "Support", icon: "life-buoy" },
+  { key: "speedtest", label: "Speed Test", icon: "activity" },
   { key: "care", label: "Call Care", icon: "phone-call" },
 ];
 
@@ -70,8 +70,14 @@ export default function Home() {
   const onAction = (key: string) => {
     if (key === "recharge") router.push({ pathname: "/recharge", params: { planId: active?.plan?.id ?? "" } });
     else if (key === "upgrade") router.push("/(tabs)/plans");
+    else if (key === "speedtest") router.push("/speed-test");
     else if (key === "support") router.push("/(tabs)/complaints");
     else if (key === "care") router.push("/customer-care");
+  };
+
+  const onOfferPress = (offer: any) => {
+    if (/refer/i.test(offer.title)) router.push("/referral");
+    else router.push("/(tabs)/plans");
   };
 
   const offerW = width - spacing.lg * 2;
@@ -158,6 +164,28 @@ export default function Home() {
           )}
         </View>
 
+        {/* One-tap speed test */}
+        {active ? (
+          <Pressable
+            testID="speedtest-launcher"
+            onPress={() => onAction("speedtest")}
+            style={({ pressed }) => [styles.speedStrip, pressed && { opacity: 0.85 }]}
+          >
+            <View style={styles.speedLeft}>
+              <View style={styles.speedIcon}>
+                <Feather name="activity" size={20} color={colors.brandPrimary} />
+              </View>
+              <View>
+                <Text style={styles.speedTitle}>Check your speed</Text>
+                <Text style={styles.speedSub}>Test your connection health instantly</Text>
+              </View>
+            </View>
+            <View style={styles.speedGo}>
+              <Feather name="play" size={16} color="#fff" />
+            </View>
+          </Pressable>
+        ) : null}
+
         {/* Quick actions */}
         <View style={[styles.section, styles.actionsRow]}>
           {QUICK_ACTIONS.map((a) => (
@@ -195,7 +223,7 @@ export default function Home() {
               <Pressable
                 key={o.id}
                 testID={`offer-${o.id}`}
-                onPress={() => router.push("/(tabs)/plans")}
+                onPress={() => onOfferPress(o)}
                 style={[styles.offer, { width: offerW }]}
               >
                 <Image source={{ uri: o.image }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
@@ -247,6 +275,37 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   section: { paddingHorizontal: spacing.lg, marginTop: spacing.md },
+  speedStrip: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  speedLeft: { flexDirection: "row", alignItems: "center", gap: spacing.md, flex: 1 },
+  speedIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: radius.sm,
+    backgroundColor: colors.brandTertiary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  speedTitle: { fontFamily: fonts.bold, fontSize: 15, color: colors.onSurface },
+  speedSub: { fontFamily: fonts.regular, fontSize: 12, color: colors.onSurfaceSecondary, marginTop: 1 },
+  speedGo: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.brandPrimary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   hero: {
     borderRadius: radius.lg,
     padding: spacing.lg,
