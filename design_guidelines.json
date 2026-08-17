@@ -1,0 +1,211 @@
+{
+  "app_name": "Habib Networks",
+  "personality": "1 iOS-Native Clean",
+  "personality_one_liner": "A stable, high-contrast utility hub that prioritizes data readability and functional actions without sacrificing warmth, leaning heavily on the brand's bold red and deep navy.",
+  "color": {
+    "light": {
+      "surface": "#FFFFFF",
+      "onSurface": "#0A1128",
+      "surfaceSecondary": "#F2F4F7",
+      "onSurfaceSecondary": "#475467",
+      "surfaceTertiary": "#E4E7EC",
+      "onSurfaceTertiary": "#1D2939",
+      "surfaceInverse": "#0A1128",
+      "onSurfaceInverse": "#FFFFFF",
+      "brand": "#E63946",
+      "brandPrimary": "#D90429",
+      "onBrandPrimary": "#FFFFFF",
+      "brandSecondary": "#EF233C",
+      "onBrandSecondary": "#FFFFFF",
+      "brandTertiary": "#FFEDF0",
+      "onBrandTertiary": "#D90429",
+      "success": "#F0FDF4",
+      "onSuccess": "#027A48",
+      "warning": "#FEF0C7",
+      "onWarning": "#B54708",
+      "error": "#FEF3F2",
+      "onError": "#B42318",
+      "info": "#F1F5F9",
+      "onInfo": "#0F172A",
+      "border": "#EAECF0",
+      "borderStrong": "#D0D5DD",
+      "divider": "#F2F4F7"
+    },
+    "dark": {
+      "surface": "#000000",
+      "onSurface": "#F8FAFC",
+      "surfaceSecondary": "#1C1C1E",
+      "onSurfaceSecondary": "#A1A1AA",
+      "surfaceTertiary": "#2C2C2E",
+      "onSurfaceTertiary": "#D4D4D8",
+      "surfaceInverse": "#F8FAFC",
+      "onSurfaceInverse": "#000000",
+      "brand": "#E63946",
+      "brandPrimary": "#EF233C",
+      "onBrandPrimary": "#FFFFFF",
+      "brandSecondary": "#D90429",
+      "onBrandSecondary": "#FFFFFF",
+      "brandTertiary": "#4A151E",
+      "onBrandTertiary": "#FFEDF0",
+      "success": "#054F31",
+      "onSuccess": "#34D399",
+      "warning": "#7A2E0E",
+      "onWarning": "#FBBF24",
+      "error": "#7A271A",
+      "onError": "#F87171",
+      "info": "#1E293B",
+      "onInfo": "#CBD5E1",
+      "border": "#2C2C2E",
+      "borderStrong": "#3A3A3C",
+      "divider": "#1C1C1E"
+    }
+  },
+  "typography": {
+    "displayFontFamily": "Space Grotesk",
+    "textFontFamily": "Plus Jakarta Sans",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24
+    }
+  },
+  "spacing": {
+    "rule": "Generous iOS-native margins. Use 16pt (lg) horizontal screen padding. Ensure primary actions are sticky at the bottom with 24pt (xl) bottom spacing for the thumb zone.",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 6,
+    "md": 12,
+    "lg": 20,
+    "pill": 999
+  },
+  "shadow_tier": 1,
+  "navigation": "bottom_tabs",
+  "icon_set": "Feather",
+  "glassmorphism": {
+    "enabled": true,
+    "do's": [
+      "Bottom tab bar background",
+      "Sticky headers above scrolling content",
+      "Hero active plan card overlay (if overlaid on a subtle background gradient)"
+    ],
+    "dont's": [
+      "Standard list rows",
+      "Form inputs",
+      "Body content cards"
+    ]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-glass-effect",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "Splash & Login",
+      "purpose": "Full-bleed engaging background with bottom sheet OTP authentication.",
+      "states": {
+        "loading": "Centered spinner on surfaceInverse",
+        "empty": "N/A",
+        "error": "Error toast for invalid OTP"
+      },
+      "layout": "Screen background is splash_bg image. Use a vertical linear gradient scrim (transparent to surfaceInverse) starting halfway down. The bottom 40% houses a clean, white (surface) bottom sheet with the mobile number input, OTP mock form, and a full-width brandPrimary CTA button."
+    },
+    {
+      "name": "Home Dashboard",
+      "purpose": "Provides an immediate view of current active plan, data usage, and quick utility links.",
+      "states": {
+        "loading": "Skeleton of the hero card and promo horizontal scroll.",
+        "empty": "N/A",
+        "error": "Error state with a 'Retry' button in the center."
+      },
+      "layout": "Top layer: 'Good Morning' + user name. Below: Hero 'Active Plan' Card (surfaceSecondary) prominently featuring a Circular Progress indicator for data usage (e.g., 150GB / 300GB) and 'Days Remaining' in large Space Grotesk font. A 'Quick Recharge' button sits inside this card. Below the hero: a horizontally scrolling 'Promotional Offers' section with image cards. Bottom section: grid of 'Quick Actions' (Upgrade, Pay Bill, Speed Test, Support) in brandTertiary tinted icon containers."
+    },
+    {
+      "name": "Plans",
+      "purpose": "Browse, filter, and select broadband plans.",
+      "states": {
+        "loading": "List of skeleton cards.",
+        "empty": "Illustration/Icon + 'No plans found for this filter.'",
+        "error": "Failed to load plans, pull to refresh."
+      },
+      "layout": "Sticky header with a Segmented Control (e.g., 'Monthly', '6 Months', 'Yearly'). Below, a vertically scrolling list of Plan Cards. Each card uses Space Grotesk for the prominent speed (e.g., '100 Mbps') and price. Include subtle dividers for feature lists (e.g., Unlimited Data, Free Router). A primary CTA 'Select Plan' is at the bottom of each card."
+    },
+    {
+      "name": "Recharge & UPI",
+      "purpose": "Checkout flow to pay for a selected plan via mocked UPI.",
+      "states": {
+        "loading": "Processing payment spinner over a translucent overlay.",
+        "empty": "N/A",
+        "error": "Payment failed screen with 'Retry Payment' CTA."
+      },
+      "layout": "Top section: Order Summary showing selected plan and amount. Middle section: 'Select Payment Method' with stylized options (Google Pay, PhonePe, Paytm). Bottom: Sticky 'Pay Now' CTA. Upon tap, transitions to a success state filling the screen (large checkmark, 'Recharge Successful', 'Back to Home' CTA)."
+    },
+    {
+      "name": "Complaints",
+      "purpose": "Manage support tickets and track resolution status.",
+      "states": {
+        "loading": "Skeleton list of tickets.",
+        "empty": "Empty state illustration + 'No active complaints. Everything is running smoothly!'",
+        "error": "Could not fetch complaints."
+      },
+      "layout": "Header with 'Active' / 'Resolved' segmented filter. Scrollable list of Complaint Cards. Each card displays Ticket ID, Date, Subject, and a status pill (warning for open, success for resolved). Floating Action Button (FAB) anchored bottom-right to 'Submit New Complaint'."
+    },
+    {
+      "name": "Account",
+      "purpose": "Manage profile details, connection ID, and app settings.",
+      "states": {
+        "loading": "Skeleton profile layout.",
+        "empty": "N/A",
+        "error": "Failed to load profile details."
+      },
+      "layout": "Top section: User Avatar (initials on brandTertiary) alongside Name, Phone, and Connection ID. Below: A list of settings rows (Billing History, Customer Care, Change Password, Logout). Each row uses a leading Feather icon inside a tinted square container. Tapping 'Customer Care' opens a mock in-app calling screen or dialer."
+    }
+  ],
+  "images": {
+    "splash_bg": {
+      "url": "https://images.unsplash.com/photo-1648737966100-18f790c93a86?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxOTJ8MHwxfHNlYXJjaHwyfHxmYW1pbHklMjBlbmpveWluZyUyMGZhc3QlMjB3aWZpJTIwaW50ZXJuZXQlMjBhdCUyMGhvbWV8ZW58MHx8fHwxNzg2OTMwMDMzfDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Family enjoying fast wifi on tablet"
+    },
+    "promo_gaming": {
+      "url": "https://images.unsplash.com/photo-1564049489314-60d154ff107d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxOTB8MHwxfHNlYXJjaHwxfHxwZXJzb24lMjBwbGF5aW5nJTIwb25saW5lJTIwbXVsdGlwbGF5ZXIlMjBnYW1lJTIwb24lMjBtb2JpbGV8ZW58MHx8fHwxNzg2OTMwMDQ2fDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Person playing mobile multiplayer game"
+    },
+    "promo_fiber": {
+      "url": "https://images.unsplash.com/photo-1597733336794-12d05021d510?crop=entropy&cs=srgb&fm=jpg&ixid=M3w7NDQ2NDN8MHwxfHNlYXJjaHwyfHxmaWJlciUyMG9wdGljJTIwY2FibGVzJTIwZ2xvd2luZ3xlbnwwfHx8fDE3ODY5MzAwMzN8MA&ixlib=rb-4.1.0&q=85",
+      "alt": "Glowing fiber optic cables"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Strictly honor the 'No Blue' rule. The brand uses a dark navy (SITI-inspired), so I have designated #0A1128 as the surfaceInverse and primary text color to fulfill the brand requirement without creating a generic 'AI blue' app. Do not introduce any sky blue, royal blue, or indigo.",
+    "Data readability is the top priority for the Home Dashboard. Ensure the Data Usage circular progress indicator is prominent and uses Space Grotesk for its numbers.",
+    "Use Space Grotesk strictly for all numbers: speeds, prices, data quotas, and ticket IDs. Use Plus Jakarta Sans for all standard body text, labels, and descriptions.",
+    "Implement the gradient scrim pattern underneath any text overlaid on images (especially on the splash_bg). Use a 3-stop vertical gradient from transparent to surfaceInverse at 70%+ opacity to guarantee contrast.",
+    "Fallback for SITI Broadband logo: Use a clean text logo or 'HN' initials inside a brandPrimary tinted square if a graphical mark is not explicitly available.",
+    "Add subtle haptic feedback on tab changes, filter selection, button presses, and successful UPI payment."
+  ],
+  "haptics": {
+    "events": {
+      "tab_press": "light",
+      "button_press": "medium",
+      "success_state": "success",
+      "error_state": "error",
+      "segmented_control_switch": "light"
+    }
+  }
+}
