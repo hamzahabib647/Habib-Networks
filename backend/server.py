@@ -18,6 +18,8 @@ from datetime import datetime, timezone, timedelta
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
+# In-memory OTP store: phone -> {code, expires_at}
+OTP_STORE: dict[str, dict] = {}
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -282,14 +284,43 @@ async def root():
 async def send_otp(req: OTPRequest):
     if len(req.phone) < 10:
         raise HTTPException(status_code=400, detail="Enter a valid 10-digit number")
-    # Mocked OTP delivery
-    return {"success": True, "message": "OTP sent successfully", "hint": "Use 1234 to continue"}
 
+    # Generate 4-digit OTP
+    otp_code = str(random.randint(1000, 9999))
+    expires_at = time.time() + 5 * 60  # 5 minutes
+
+    OTP_STORE[req.phone] = {
+        "code": otp_code,
+        "expires_at": expires_at,
+    }
+
+    # Log OTP so you can see it in server logs (replace with SMS later)
+    print(f"[OTP] phone={req.phone} code={otp_code}")
+
+    return {
+        "success": True,
+        "message": "OTP sent successfully",
+        "hint": f"Use {otp_code} to continue (check server logs)",
+    }
 
 @api_router.post("/auth/verify-otp")
 async def verify_otp(req: OTPVerify):
-    if req.otp != "1234":
-        raise HTTPException(status_code=400, detail="Invalid OTP. Try 1234")
+    import time
+
+    entry = OTP_STORE.get(req.phone)
+    if not entry:
+        raise HTTPException(status_code=400, detail="OTP not found. Please request a new OTP.")
+
+    if time.time() > entry["expires_at"]:
+        OTP_STORE.pop(req.phone, None)
+        raise HTTPException(status_code=400, detail="OTP expired. Please request a new OTP.")
+
+    if req.otp != entry["code"]:
+        raise HTTPException(status_code=400, detail="Invalid OTP")
+
+    # OTP is valid; clean it up
+    OTP_STORE.pop(req.phone, None)
+
     user = await ensure_user(req.phone)
     return {"success": True, "token": req.phone, "user": user_public(user)}
 
