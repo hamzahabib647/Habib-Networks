@@ -219,7 +219,7 @@ export default function Home() {
             decelerationRate="fast"
             snapToInterval={offerW + spacing.md}
           >
-            {offers.map((o) => (
+            {(Array.isArray(offers) ? offers : []).map((o) => (
               <Pressable
                 key={o.id}
                 testID={`offer-${o.id}`}
