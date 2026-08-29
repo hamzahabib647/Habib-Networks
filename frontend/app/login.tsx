@@ -111,27 +111,31 @@ export default function Login() {
                   <View style={styles.ccBox}>
                     <Text style={styles.ccText}>+91</Text>
                   </View>
-                 <TextInput
-  ref={phoneRef}
-  testID="phone-input"
-  style={styles.input}
-  placeholder="10-digit mobile number"
-  placeholderTextColor={colors.onSurfaceSecondary}
-  keyboardType="number-pad"
-  maxLength={10}
-  value={phone}
-  onChangeText={(t) => setPhone(t.replace(/[^0-9]/g, ""))}
-  returnKeyType="done"
-  onSubmitEditing={sendOtp}
-  focusable={true}
-  onClick={(e: any) => e.stopPropagation()}
-  onFocus={() => {
-    if (Platform.OS === 'web') {
-      phoneRef.current?.focus();
-    }
-  }}
-/>
-                </View>
+                <View style={styles.inputRow}>
+  <View style={styles.ccBox}>
+    <Text style={styles.ccText}>+91</Text>
+  </View>
+  <TextInput
+    ref={phoneRef}
+    testID="phone-input"
+    style={styles.input}
+    placeholder="10-digit mobile number"
+    placeholderTextColor={colors.onSurfaceSecondary}
+    keyboardType="number-pad"
+    maxLength={10}
+    value={phone}
+    onChangeText={(t) => setPhone(t.replace(/[^0-9]/g, ""))}
+    returnKeyType="done"
+    onSubmitEditing={sendOtp}
+    focusable={true}
+    onClick={(e: any) => e.stopPropagation()}
+    onFocus={() => {
+      if (Platform.OS === 'web') {
+        phoneRef.current?.focus();
+      }
+    }}
+  />
+</View>                </View>
 
                 <Button
                   testID="send-otp-button"
