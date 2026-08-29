@@ -51,8 +51,8 @@ export default function Home() {
   const load = useCallback(async () => {
     try {
       const [me, off] = await Promise.all([api.me(), api.offers()]);
-      setActive(me.active);
-      setOffers(off);
+setActive(me.active);
+setOffers(Array.isArray(off) ? off : off?.offers ?? []);
     } catch (e: any) {
       toast.show(e.message || "Failed to load", "error");
     } finally {
