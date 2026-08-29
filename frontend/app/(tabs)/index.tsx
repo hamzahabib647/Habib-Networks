@@ -49,17 +49,17 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
-    try {
-      const [me, off] = await Promise.all([api.me(), api.offers()]);
-setActive(me.active);
-setOffers(Array.isArray(off) ? off : off?.offers ?? []);
-    } catch (e: any) {
-      toast.show(e.message || "Failed to load", "error");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [toast]);
+  try {
+    const [me, off] = await Promise.all([api.me(), api.offers()]);
+    console.log("OFFERS RAW:", off);
+    setActive(me.active);
+    setOffers(Array.isArray(off) ? off : off?.offers ?? []);
+  } catch (e: any) {
+    toast.show(e.message || "Failed to load", "error");
+  } finally {
+    setLoading(false);
+    setRefreshing(false);
+  }  }, [toast]);
 
   useFocusEffect(
     useCallback(() => {
