@@ -37,6 +37,7 @@ export default function Login() {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const otpRef = useRef<TextInput>(null);
+  const phoneRef = useRef<TextInput>(null);
 
   const sendOtp = async () => {
     if (phone.length !== 10) {
@@ -110,18 +111,26 @@ export default function Login() {
                   <View style={styles.ccBox}>
                     <Text style={styles.ccText}>+91</Text>
                   </View>
-                  <TextInput
-                    testID="phone-input"
-                    style={styles.input}
-                    placeholder="10-digit mobile number"
-                    placeholderTextColor={colors.onSurfaceSecondary}
-                    keyboardType="number-pad"
-                    maxLength={10}
-                    value={phone}
-                    onChangeText={(t) => setPhone(t.replace(/[^0-9]/g, ""))}
-                    returnKeyType="done"
-                    onSubmitEditing={sendOtp}
-                  />
+                 <TextInput
+  ref={phoneRef}
+  testID="phone-input"
+  style={styles.input}
+  placeholder="10-digit mobile number"
+  placeholderTextColor={colors.onSurfaceSecondary}
+  keyboardType="number-pad"
+  maxLength={10}
+  value={phone}
+  onChangeText={(t) => setPhone(t.replace(/[^0-9]/g, ""))}
+  returnKeyType="done"
+  onSubmitEditing={sendOtp}
+  focusable={true}
+  onClick={(e: any) => e.stopPropagation()}
+  onFocus={() => {
+    if (Platform.OS === 'web') {
+      phoneRef.current?.focus();
+    }
+  }}
+/>
                 </View>
 
                 <Button
